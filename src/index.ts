@@ -7,6 +7,7 @@ import { secretsCmd }  from './commands/secrets.js'
 import { policyCmd }   from './commands/policy.js'
 import { auditCmd }    from './commands/audit.js'
 
+
 // Read version from package.json — single source of truth
 const require = createRequire(import.meta.url)
 const { version } = require('../package.json') as { version: string }
