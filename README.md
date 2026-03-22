@@ -62,7 +62,7 @@ vaultsync machine create --name production-01
 On your VPS, install the agent:
 
 ```bash
-curl -fsSL https://github.com/KingVics/vaultsync/releases/latest/download/install.sh | sudo bash
+curl -fsSL https://dub.sh/vaultsync-install | sudo bash
 ```
 
 Then enroll it using the token from step 4:
