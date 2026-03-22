@@ -94,7 +94,7 @@ Returns a one-time enrollment token (OTET).
 ### 5. Enroll the VPS
 
 ```bash
-curl -fsSL https://dub.sh/vaultsync-install | sudo bash
+curl -fsSL https://cdn.jsdelivr.net/gh/KingVics/vaultsync-releases@main/install.sh | sudo bash
 vaultsync enroll <OTET>
 ```
 
