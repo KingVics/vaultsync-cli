@@ -1,8 +1,23 @@
-# vaultsync-cli
+# VaultSync CLI — Zero-Disk Secrets Management for VPS & Node.js
 
-Zero-disk secrets delivery for your VPS — push encrypted secrets from your machine and inject them into any process at runtime. **Plaintext never leaves your developer machine and never touches disk on the server.**
+> Run apps with secrets — without ever storing `.env` files on your server.
 
-## How it works
+VaultSync CLI lets you securely deliver secrets to your applications by encrypting them locally and injecting them into processes at runtime. **Plaintext never leaves your machine and is never written to disk on the server.**
+
+---
+
+## ⚡ Quick demo
+
+```bash
+vaultsync secrets push --label API --env prod --file .env
+vaultsync run --label API --env prod -- node app.js
+```
+
+No `.env` files on your server. No secrets on disk.
+
+---
+
+## 🧠 How it works
 
 ```
 Developer machine                  VaultSync Server              VPS Agent
@@ -15,26 +30,32 @@ vaultsync grant          ───────►  stores RSA-wrapped AES key
 ```
 
 1. CLI encrypts your `.env` file locally with AES-256-GCM
-2. Ciphertext is pushed to the server — the server **never sees plaintext**
-3. The AES key is wrapped with each machine's RSA public key and stored per-machine
-4. At runtime, the agent decrypts the key in RAM and injects secrets into the child process environment
-5. Secrets are zeroed from memory after the process exits
+2. Only ciphertext is sent to the server — plaintext is never exposed
+3. AES key is wrapped with each machine's RSA public key
+4. Secrets are decrypted **only in memory on the VPS**
+5. Secrets are zeroed after process exit
 
-## Installation
+---
+
+## 📦 Installation
 
 ```bash
 npm install -g vaultsync-cli
 ```
 
-Requires **Node.js 18+**.
+Requires **Node.js 18+**
 
-## Quick start
+---
+
+## 🏁 Quick start
 
 ### 1. Start your VaultSync server
 
-Deploy the [vaultsync server](https://github.com/KingVics/vaultsync/tree/main/server) and note your server URL and master API key.
+Deploy the server and note your API key.
 
-### 2. Log in from your developer machine
+---
+
+### 2. Log in
 
 ```bash
 vaultsync login --key <YOUR_API_KEY>
@@ -42,124 +63,149 @@ vaultsync login --key <YOUR_API_KEY>
 
 Credentials are saved to `~/.vaultsync/config.json` (mode 600).
 
+For self-hosted deployments:
+
+```bash
+VAULTSYNC_SERVER=https://your-vault-server.com vaultsync login --key <YOUR_API_KEY>
+```
+
+---
+
 ### 3. Push a secret
 
 ```bash
 vaultsync secrets push --label API-Backend --env Production --file .env
 ```
 
-The AES key is saved to `~/.vaultsync/keys/` and never sent to the server.
+The AES key is stored locally and never sent to the server.
 
-### 4. Create a machine slot
+---
+
+### 4. Create a machine
 
 ```bash
 vaultsync machine create --name production-01
-# Returns a one-time enrollment token (OTET) — valid for 15 minutes
 ```
+
+Returns a one-time enrollment token (OTET).
+
+---
 
 ### 5. Enroll the VPS
 
-On your VPS, install the agent:
-
 ```bash
 curl -fsSL https://dub.sh/vaultsync-install | sudo bash
-```
-
-Then enroll it using the token from step 4:
-
-```bash
 vaultsync enroll <OTET>
 ```
 
-### 6. Grant the machine access
+---
 
-Back on your developer machine:
+### 6. Grant access
 
 ```bash
 vaultsync grant --machine production-01 --label API-Backend --env Production
 ```
 
-### 7. Run your app with secrets injected
+---
 
-On the VPS:
+### 7. Run your app
 
 ```bash
 vaultsync run --label API-Backend --env Production -- node dist/index.js
 ```
 
-Secrets are available as environment variables inside the process. They are never written to disk.
+Secrets are injected into environment variables and never written to disk.
 
 ---
 
-## Commands
+## 🛡️ Why VaultSync?
 
-### `vaultsync login`
+* 🔐 Secrets encrypted **before leaving your machine**
+* 🧠 Server stores only ciphertext — never plaintext
+* ⚡ Runtime injection (no `.env` files on servers)
+* 🔑 Per-machine access using RSA keypairs
+* 🧹 Secrets wiped from memory after execution
 
-```
+---
+
+## 🆚 Alternatives
+
+VaultSync is a lightweight alternative to:
+
+* HashiCorp Vault
+* Doppler
+* Infisical
+
+Unlike traditional tools, VaultSync:
+
+* requires no heavy infrastructure
+* avoids storing plaintext secrets anywhere
+* injects secrets directly into process memory
+
+---
+
+## 📚 Commands
+
+### Auth
+
+```bash
 vaultsync login --key <apiKey>
 ```
 
-Save your API key to `~/.vaultsync/config.json`.
+---
 
-For self-hosted deployments, set `VAULTSYNC_SERVER` before logging in:
+### Secrets
+
+* `secrets push` → encrypt + upload `.env`
+* `secrets list` → view stored blobs
+* `secrets delete` → remove secrets
+
+---
+
+### Machines
+
+* `machine create` → create + enrollment token
+* `machine list` → list machines
+* `machine revoke` → block access
+* `machine delete` → remove machine
+
+---
+
+### Access control
+
 ```bash
-VAULTSYNC_SERVER=https://your-vault-server.com vaultsync login --key <apiKey>
-```
-
----
-
-### `vaultsync secrets`
-
-| Command | Description |
-|---|---|
-| `secrets push --label <l> --env <e> --file <path>` | Encrypt and push a `.env` file |
-| `secrets list [--label <l>] [--env <e>]` | List all secret blobs |
-| `secrets delete --id <blobId>` | Delete a blob and all its access grants |
-
----
-
-### `vaultsync machine`
-
-| Command | Description |
-|---|---|
-| `machine create --name <n>` | Create a machine slot and get its enrollment token |
-| `machine list` | List all enrolled machines |
-| `machine revoke --id <id>` | Revoke a machine (blocks all future secret fetches) |
-| `machine delete --id <id>` | Permanently delete a machine |
-
----
-
-### `vaultsync grant`
-
-```
 vaultsync grant --machine <name> --label <label> --env <environment>
 ```
 
-Wrap the local AES key with the machine's RSA public key and register the access policy on the server.
-
-> Re-run `grant` after every `secrets push` — each push creates a new blob with a new ID.
+> Re-run `grant` after each `secrets push`
 
 ---
 
-### `vaultsync audit`
+### Audit
 
+```bash
+vaultsync audit
 ```
-vaultsync audit [--machine-id <uuid>] [--action <ACTION>] [--limit <n>]
-```
-
-View the server-side audit log. Filter by machine or action type (e.g. `SECRET_FETCHED`, `CHALLENGE_FAILED`).
 
 ---
 
-## Security model
+## 🔐 Security model
 
-- **AES-256-GCM** encryption for secret blobs
-- **RSA-4096 + OAEP SHA-256** for key wrapping and challenge-response authentication
-- **Challenge-response auth**: server encrypts a random nonce with the machine's public key; the agent decrypts it to prove private key possession without sending a password
-- **Replay protection**: nonces are single-use, stored in Redis with a short TTL
-- **Zero-disk**: secrets exist only in process memory on the server — never written to disk
-- **Per-machine keys**: each machine gets its own wrapped copy of the AES key — revoking one machine doesn't affect others
+* AES-256-GCM encryption for secret blobs
+* RSA-4096 (OAEP SHA-256) for key wrapping
+* Challenge-response authentication (no passwords)
+* Replay protection using Redis (short-lived nonce)
+* **Zero-disk (runtime)**: secrets decrypted only in memory on the VPS
+* Per-machine access control
 
-## License
+---
+
+## 🔍 Keywords
+
+secrets management, dotenv alternative, environment variables, nodejs secrets, vps deployment, encryption cli, zero trust security
+
+---
+
+## 📄 License
 
 MIT
