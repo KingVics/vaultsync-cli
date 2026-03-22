@@ -5,7 +5,9 @@ import { loginCmd }    from './commands/login.js'
 import { machinesCmd } from './commands/machines.js'
 import { secretsCmd }  from './commands/secrets.js'
 import { policyCmd }   from './commands/policy.js'
-import { auditCmd }    from './commands/audit.js'
+import { auditCmd }      from './commands/audit.js'
+import { adminCmd }      from './commands/admin.js'
+import { registerCmd }   from './commands/register.js'
 
 // Read version from package.json — single source of truth
 const require = createRequire(import.meta.url)
@@ -21,5 +23,7 @@ program.addCommand(machinesCmd)
 program.addCommand(secretsCmd)
 program.addCommand(policyCmd)
 program.addCommand(auditCmd)
+program.addCommand(adminCmd)
+program.addCommand(registerCmd)
 
 program.parse()

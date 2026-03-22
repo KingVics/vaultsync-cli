@@ -49,9 +49,15 @@ Requires **Node.js 18+**
 
 ## 🏁 Quick start
 
-### 1. Start your VaultSync server
+### 1. Get an invite code
 
-Deploy the server and note your API key.
+Ask your server owner for an invite code, then register your account:
+
+```bash
+VAULTSYNC_SERVER=https://your-vault-server.com vaultsync register --invite inv_xxx --name alice
+```
+
+This returns a one-time API key — save it immediately.
 
 ---
 
@@ -63,10 +69,10 @@ vaultsync login --key <YOUR_API_KEY>
 
 Credentials are saved to `~/.vaultsync/config.json` (mode 600).
 
-For self-hosted deployments:
+Set the server URL once via environment variable (or add it to your shell profile):
 
 ```bash
-VAULTSYNC_SERVER=https://your-vault-server.com vaultsync login --key <YOUR_API_KEY>
+export VAULTSYNC_SERVER=https://your-vault-server.com
 ```
 
 ---
@@ -146,9 +152,13 @@ Unlike traditional tools, VaultSync:
 
 ## 📚 Commands
 
-### Auth
+### Account
 
 ```bash
+# Register with an invite code (no login required)
+vaultsync register --invite <code> --name <username>
+
+# Save your API key locally
 vaultsync login --key <apiKey>
 ```
 
@@ -185,6 +195,26 @@ vaultsync grant --machine <name> --label <label> --env <environment>
 
 ```bash
 vaultsync audit
+```
+
+---
+
+### Admin (server owner only)
+
+Requires your master API key.
+
+```bash
+# User management
+vaultsync admin user create --name <name>
+vaultsync admin user list
+vaultsync admin user deactivate --id <id>
+vaultsync admin user activate --id <id>
+vaultsync admin user delete --id <id>
+
+# Invite codes
+vaultsync admin invite create [--expires-hours 24]
+vaultsync admin invite list
+vaultsync admin invite delete --id <id>
 ```
 
 ---
