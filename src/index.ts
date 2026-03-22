@@ -5,7 +5,7 @@ import { loginCmd }    from './commands/login.js'
 import { machinesCmd } from './commands/machines.js'
 import { secretsCmd }  from './commands/secrets.js'
 import { policyCmd }   from './commands/policy.js'
-import { auditCmd }      from './commands/audit.js'
+import { auditCmd }    from './commands/audit.js'
 import { adminCmd }      from './commands/admin.js'
 import { registerCmd }   from './commands/register.js'
 

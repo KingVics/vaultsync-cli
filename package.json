@@ -1,6 +1,6 @@
 {
   "name": "vaultsync-cli",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Zero-disk secrets delivery — CLI for pushing secrets and managing machines",
   "keywords": [
     "secrets",
@@ -37,7 +37,8 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=18"

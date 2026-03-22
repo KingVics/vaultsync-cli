@@ -93,6 +93,24 @@ userCmd
   })
 
 userCmd
+  .command('reset-key')
+  .description('Reset a user\'s API key — old key is immediately revoked')
+  .requiredOption('--id <userId>', 'User ID (from vaultsync admin user list)')
+  .action(async (opts) => {
+    try {
+      const result = await api('POST', `/admin/users/${opts.id}/reset-key`)
+      console.log(`\n✓ API key reset for "${result.name}"`)
+      console.log(`\n  New API Key: ${result.api_key}`)
+      console.log(`  ⚠ Old key is immediately revoked. Save this — it will never be shown again.`)
+      console.log(`\n  Share with user:`)
+      console.log(`  vaultsync login --key ${result.api_key}\n`)
+    } catch (err) {
+      console.error(`✗ ${(err as Error).message}`)
+      process.exit(1)
+    }
+  })
+
+userCmd
   .command('delete')
   .description('Permanently delete a user and all their data')
   .requiredOption('--id <userId>', 'User ID (from vaultsync admin user list)')
