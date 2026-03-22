@@ -2,8 +2,8 @@ name: Publish to npm
 
 on:
   push:
-    tags:
-      - 'v*.*.*'   # triggers on v0.1.3, v1.0.0, etc.
+    branches:
+      - main
 
 permissions:
   contents: read
