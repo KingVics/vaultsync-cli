@@ -1,14 +1,28 @@
 {
   "name": "vaultsync-cli",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Zero-disk secrets delivery — CLI for pushing secrets and managing machines",
   "keywords": [
     "secrets",
     "secrets-management",
     "vault",
     "env",
+    "dotenv",
+    "environment-variables",
     "cli",
-    "devops"
+    "devops",
+    "security",
+    "encryption",
+    "cryptography",
+    "zero-trust",
+    "zero-disk",
+    "vps",
+    "deployment",
+    "config",
+    "nodejs",
+    "aes",
+    "rsa",
+    "infosec"
   ],
   "license": "MIT",
   "repository": {
