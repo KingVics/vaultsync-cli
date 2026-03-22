@@ -5,20 +5,10 @@
   "keywords": [
     "secrets",
     "secrets-management",
-    "dotenv",
-    "env",
-    "environment-variables",
-    "devops",
-    "vps",
-    "nodejs",
-    "cli",
-    "security",
-    "encryption",
-    "cryptography",
-    "zero-trust",
     "vault",
-    "config",
-    "deployment"
+    "env",
+    "cli",
+    "devops"
   ],
   "license": "MIT",
   "repository": {

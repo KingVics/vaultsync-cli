@@ -1,5 +1,16 @@
 import { Command } from 'commander'
+import { createInterface } from 'readline'
 import { loadConfig } from '../config.js'
+
+async function confirm(message: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  return new Promise(resolve => {
+    rl.question(`${message} (y/N) `, answer => {
+      rl.close()
+      resolve(answer.toLowerCase() === 'y')
+    })
+  })
+}
 
 // ── Shared fetch helper ───────────────────────────────────────────────────────
 
@@ -91,8 +102,13 @@ machinesCmd
   .command('delete')
   .description('Permanently delete a machine and all its wrapped keys and access policies')
   .requiredOption('--id <machineId>', 'Machine ID (from vaultsync machine list)')
+  .option('--yes', 'Skip confirmation prompt')
   .action(async (opts) => {
     try {
+      if (!opts.yes) {
+        const ok = await confirm(`Delete machine ${opts.id}? This removes all its access grants.`)
+        if (!ok) { console.log('Aborted.'); return }
+      }
       const result = await api('DELETE', `/machines/${opts.id}`)
       console.log(`✓ ${result.message}`)
     } catch (err) {

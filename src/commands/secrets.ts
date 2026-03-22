@@ -1,9 +1,20 @@
 import { Command } from 'commander'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { createCipheriv, randomBytes } from 'crypto'
+import { createInterface } from 'readline'
 import { homedir } from 'os'
 import { join } from 'path'
 import { loadConfig } from '../config.js'
+
+async function confirm(message: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  return new Promise(resolve => {
+    rl.question(`${message} (y/N) `, answer => {
+      rl.close()
+      resolve(answer.toLowerCase() === 'y')
+    })
+  })
+}
 
 // ── Key store ─────────────────────────────────────────────────────────────────
 // AES keys are stored locally at ~/.vaultsync/keys/<label>__<env>.key (hex)
@@ -153,8 +164,13 @@ secretsCmd
   .command('delete')
   .description('Delete a secret blob and all associated access grants')
   .requiredOption('--id <blobId>', 'Blob ID (from vaultsync secrets list)')
+  .option('--yes', 'Skip confirmation prompt')
   .action(async (opts) => {
     try {
+      if (!opts.yes) {
+        const ok = await confirm(`Delete secret ${opts.id}? This removes all machine access grants for this blob.`)
+        if (!ok) { console.log('Aborted.'); return }
+      }
       const result = await api('DELETE', `/secrets/${opts.id}`)
       console.log(`✓ ${result.message}`)
     } catch (err) {
