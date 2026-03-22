@@ -37,7 +37,22 @@ vaultsync grant          ───────►  stores RSA-wrapped AES key
 
 ---
 
+## 🖥️ Two separate tools
+
+VaultSync has two binaries — make sure you're using the right one:
+
+| Tool | Installed on | Purpose |
+|------|-------------|---------|
+| **vaultsync-cli** (this package) | Your **developer/local machine** | Push secrets, manage machines, register, admin |
+| **vaultsync agent** | Your **VPS** | Fetch secrets at runtime and inject into processes |
+
+> **Never install the CLI on your VPS.** The agent (`curl ... | sudo bash`) is what runs there.
+
+---
+
 ## 📦 Installation
+
+Install the CLI on your **local machine**:
 
 ```bash
 npm install -g vaultsync-cli
@@ -49,27 +64,13 @@ Requires **Node.js 18+**
 
 ## 🏁 Quick start
 
-### 1. Get an invite code
-
-Ask your server owner for an invite code, then register your account:
-
-```bash
-VAULTSYNC_SERVER=https://your-vault-server.com vaultsync register --invite inv_xxx --name alice
-```
-
-This returns a one-time API key — save it immediately.
+> Commands marked **[local]** run on your developer machine. Commands marked **[VPS]** run on your server.
 
 ---
 
-### 2. Log in
+### 1. Set the server URL — [local]
 
-```bash
-vaultsync login --key <YOUR_API_KEY>
-```
-
-Credentials are saved to `~/.vaultsync/config.json` (mode 600).
-
-Set the server URL once via environment variable (or add it to your shell profile):
+Add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) once:
 
 ```bash
 export VAULTSYNC_SERVER=https://your-vault-server.com
@@ -77,36 +78,60 @@ export VAULTSYNC_SERVER=https://your-vault-server.com
 
 ---
 
-### 3. Push a secret
+### 2. Register your account — [local]
+
+Ask your server owner for an invite code, then create your account:
+
+```bash
+vaultsync register --invite inv_<code> --name yourname
+```
+
+This returns a one-time API key — **save it immediately**, it won't be shown again.
+
+---
+
+### 3. Log in — [local]
+
+```bash
+vaultsync login --key <YOUR_API_KEY>
+```
+
+Your credentials are saved to `~/.vaultsync/config.json`.
+
+---
+
+### 4. Push a secret — [local]
 
 ```bash
 vaultsync secrets push --label API-Backend --env Production --file .env
 ```
 
-The AES key is stored locally and never sent to the server.
+Your `.env` is encrypted locally — only ciphertext is sent to the server.
 
 ---
 
-### 4. Create a machine
+### 5. Create a machine — [local]
 
 ```bash
 vaultsync machine create --name production-01
 ```
 
-Returns a one-time enrollment token (OTET).
+Copy the one-time enrollment token (OTET) from the output.
 
 ---
 
-### 5. Enroll the VPS
+### 6. Enroll the VPS — [VPS]
+
+> **Use `sudo`** — the agent writes its identity key to `/etc/vaultsync/` which requires root.
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/KingVics/vaultsync-releases@main/install.sh | sudo bash
-vaultsync enroll <OTET>
+sudo vaultsync enroll <OTET>
 ```
 
 ---
 
-### 6. Grant access
+### 7. Grant access — [local]
 
 ```bash
 vaultsync grant --machine production-01 --label API-Backend --env Production
@@ -114,13 +139,13 @@ vaultsync grant --machine production-01 --label API-Backend --env Production
 
 ---
 
-### 7. Run your app
+### 8. Run your app — [VPS]
 
 ```bash
-vaultsync run --label API-Backend --env Production -- node dist/index.js
+sudo vaultsync run --label API-Backend --env Production -- node dist/index.js
 ```
 
-Secrets are injected into environment variables and never written to disk.
+Secrets are injected into your app's environment variables and never written to disk.
 
 ---
 
