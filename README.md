@@ -29,11 +29,6 @@ VaultSync avoids all of this.
 
 ---
 
-## 🎥 Demo
-
-> Add a short GIF here showing push → run → app reading env
-
----
 
 ## 🧠 How it works
 
