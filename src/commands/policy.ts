@@ -22,11 +22,14 @@ async function api(method: string, path: string, body?: unknown, query?: Record<
   const url = new URL(`${serverUrl}${path}`)
   if (query) Object.entries(query).forEach(([k, v]) => url.searchParams.set(k, v))
 
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30_000)
   const res = await fetch(url.toString(), {
     method,
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
     body: body ? JSON.stringify(body) : undefined,
-  })
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timer))
   const json = await res.json() as Record<string, unknown>
   if (!res.ok) throw new Error((json.error as string) ?? `Server returned ${res.status}`)
   return json
@@ -81,7 +84,7 @@ export const policyCmd = new Command('grant')
       console.log(`  Blob ID:     ${result.blob_id}`)
       console.log(`  Version:     v${result.version}`)
       console.log(`\n  The machine can now run:`)
-      console.log(`  VAULTSYNC_SERVER=<url> vaultsync run --label ${opts.label} --env ${opts.env} -- <command>\n`)
+      console.log(`  vaultsync run --label ${opts.label} --env ${opts.env} -- <command>\n`)
     } catch (err) {
       console.error(`✗ ${(err as Error).message}`)
       process.exit(1)
