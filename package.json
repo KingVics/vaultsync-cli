@@ -1,0 +1,44 @@
+{
+  "name": "vaultsync-cli",
+  "version": "0.1.1",
+  "description": "Zero-disk secrets delivery — CLI for pushing secrets and managing machines",
+  "keywords": [
+    "secrets",
+    "secrets-management",
+    "vault",
+    "env",
+    "cli",
+    "devops"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KingVics/vaultsync-cli.git"
+  },
+  "homepage": "https://github.com/KingVics/vaultsync-cli#readme",
+  "type": "module",
+  "bin": {
+    "vaultsync": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}
