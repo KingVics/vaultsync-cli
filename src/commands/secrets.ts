@@ -1,10 +1,12 @@
 import { Command } from 'commander'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
-import { createCipheriv, randomBytes } from 'crypto'
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 import { createInterface } from 'readline'
 import { homedir } from 'os'
 import { join } from 'path'
-import { loadConfig } from '../config.js'
+import { loadConfig, loadProjectConfig } from '../config.js'
+
+const SECRET_AGE_WARN_DAYS = 90
 
 async function confirm(message: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
@@ -89,11 +91,20 @@ export const secretsCmd = new Command('secrets')
 secretsCmd
   .command('push')
   .description('Encrypt a .env file and push the ciphertext to the vault')
-  .requiredOption('--label <label>',     'Secret label (e.g. API-Backend)')
-  .requiredOption('--env <environment>', 'Environment (e.g. Production, Staging)')
+  .option('--label <label>',     'Secret label (e.g. API-Backend)')
+  .option('--env <environment>', 'Environment (e.g. Production, Staging)')
   .requiredOption('--file <path>',       'Path to .env file to encrypt and push')
   .action(async (opts) => {
     try {
+      const proj  = loadProjectConfig()
+      opts.label  = opts.label ?? proj.label
+      opts.env    = opts.env   ?? proj.env
+
+      if (!opts.label || !opts.env) {
+        console.error('✗ --label and --env are required (or set them in .vaultsync.yml)')
+        process.exit(1)
+      }
+
       // 1. Read and encrypt locally
       const plaintext = readFileSync(opts.file)
       const { ciphertext, key, iv, authTag } = encryptBlob(plaintext)
@@ -145,20 +156,150 @@ secretsCmd
         return
       }
 
-      console.log(`\n${'LABEL'.padEnd(24)} ${'ENV'.padEnd(16)} ${'VER'.padEnd(6)} ${'CREATED'.padEnd(28)} ID`)
-      console.log('-'.repeat(100))
+      const now = Date.now()
+      const warnMs = SECRET_AGE_WARN_DAYS * 24 * 60 * 60 * 1000
+      let hasOld = false
+
+      console.log(`\n${'LABEL'.padEnd(24)} ${'ENV'.padEnd(16)} ${'VER'.padEnd(6)} ${'AGE'.padEnd(10)} ${'CREATED'.padEnd(24)} ID`)
+      console.log('-'.repeat(110))
       for (const b of blobs) {
-        const created = new Date(b.createdAt).toLocaleString()
+        const createdMs  = new Date(b.createdAt).getTime()
+        const ageDays    = Math.floor((now - createdMs) / (1000 * 60 * 60 * 24))
+        const ageLabel   = ageDays < 1 ? 'today' : `${ageDays}d`
+        const ageDisplay = ageDays >= SECRET_AGE_WARN_DAYS ? `⚠ ${ageLabel}` : ageLabel
+        const created    = new Date(b.createdAt).toLocaleString()
+        if (ageDays >= SECRET_AGE_WARN_DAYS) hasOld = true
         console.log(
-          `${b.label.padEnd(24)} ${b.environment.padEnd(16)} ${String(b.version).padEnd(6)} ${created.padEnd(28)} ${b.id}`
+          `${b.label.padEnd(24)} ${b.environment.padEnd(16)} ${String(b.version).padEnd(6)} ${ageDisplay.padEnd(10)} ${created.padEnd(24)} ${b.id}`
         )
       }
+      console.log()
+      if (hasOld) console.log(`  ⚠ Secrets marked with ⚠ are older than ${SECRET_AGE_WARN_DAYS} days — consider rotating them.\n`)
+    } catch (err) {
+      console.error(`✗ ${(err as Error).message}`)
+      process.exit(1)
+    }
+  })
+
+secretsCmd
+  .command('pull')
+  .description('Decrypt a secret blob and write it to a .env file locally')
+  .requiredOption('--id <blobId>',    'Blob ID (from vaultsync secrets list)')
+  .option('--out <path>',             'Output file path (default: .env.pulled)')
+  .option('--yes',                    'Overwrite output file without prompting')
+  .action(async (opts) => {
+    try {
+      const outPath = opts.out ?? '.env.pulled'
+
+      if (!opts.yes && existsSync(outPath)) {
+        const ok = await confirm(`"${outPath}" already exists — overwrite?`)
+        if (!ok) { console.log('Aborted.'); return }
+      }
+
+      // Fetch ciphertext from server
+      const result = await api('GET', `/secrets/${opts.id}/download`) as {
+        label: string; environment: string; version: number
+        ciphertext: string; iv: string; auth_tag: string
+      }
+
+      // Load local AES key
+      const key = loadKey(result.label, result.environment)
+
+      // Decrypt
+      const decipher = createDecipheriv(
+        'aes-256-gcm',
+        key,
+        Buffer.from(result.iv, 'base64')
+      )
+      decipher.setAuthTag(Buffer.from(result.auth_tag, 'base64'))
+      const plaintext = Buffer.concat([
+        decipher.update(Buffer.from(result.ciphertext, 'base64')),
+        decipher.final(),
+      ])
+
+      writeFileSync(outPath, plaintext, { mode: 0o600 })
+      console.log(`\n✓ Decrypted "${result.label}" (${result.environment}) v${result.version} → ${outPath}`)
+      console.log(`  ⚠ This file contains plaintext secrets — do not commit it.\n`)
+    } catch (err) {
+      console.error(`✗ ${(err as Error).message}`)
+      process.exit(1)
+    }
+  })
+
+
+secretsCmd
+  .command('diff')
+  .description('Compare two versions of a secret blob locally')
+  .option('--label <label>',     'Secret label')
+  .option('--env <environment>', 'Environment')
+  .action(async (opts) => {
+    try {
+      const proj  = loadProjectConfig()
+      const label = opts.label ?? proj.label
+      const env   = opts.env   ?? proj.env
+
+      if (!label || !env) {
+        console.error('✗ --label and --env are required (or set them in .vaultsync.yml)')
+        process.exit(1)
+      }
+
+      const result = await api('GET', '/secrets', undefined, { label, environment: env }) as {
+        blobs: Array<{ id: string; version: number; createdAt: string }>
+      }
+
+      if (result.blobs.length < 2) {
+        console.log('Only one version exists — nothing to diff.')
+        return
+      }
+
+      // Sort descending by version, take last two
+      const sorted = result.blobs.sort((a, b) => b.version - a.version)
+      const [latest, previous] = sorted
+
+      const [latestBlob, prevBlob] = await Promise.all([
+        api('GET', `/secrets/${latest.id}/download`),
+        api('GET', `/secrets/${previous.id}/download`),
+      ]) as Array<{ label: string; environment: string; version: number; ciphertext: string; iv: string; auth_tag: string }>
+
+      const key = loadKey(label, env)
+
+      function decrypt(blob: typeof latestBlob): string {
+        const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(blob.iv, 'base64'))
+        decipher.setAuthTag(Buffer.from(blob.auth_tag, 'base64'))
+        return Buffer.concat([decipher.update(Buffer.from(blob.ciphertext, 'base64')), decipher.final()]).toString('utf8')
+      }
+
+      const prevLines   = new Set(decrypt(prevBlob).split('\n').map(l => l.trim()).filter(Boolean))
+      const latestLines = decrypt(latestBlob).split('\n').map(l => l.trim()).filter(Boolean)
+
+      console.log(`\nDiff: "${label}" (${env})  v${previous.version} → v${latest.version}`)
+      console.log(`  Previous: ${new Date(previous.createdAt).toLocaleString()}`)
+      console.log(`  Latest:   ${new Date(latest.createdAt).toLocaleString()}\n`)
+
+      let changed = false
+      for (const line of latestLines) {
+        if (!prevLines.has(line)) {
+          const key = line.split('=')[0]
+          console.log(`  + ${key}=<changed>`)
+          changed = true
+        }
+      }
+      const latestSet = new Set(latestLines.map(l => l.split('=')[0]))
+      for (const line of prevLines) {
+        const k = line.split('=')[0]
+        if (!latestSet.has(k)) {
+          console.log(`  - ${k}`)
+          changed = true
+        }
+      }
+      if (!changed) console.log('  No changes detected between versions.')
       console.log()
     } catch (err) {
       console.error(`✗ ${(err as Error).message}`)
       process.exit(1)
     }
   })
+
 
 secretsCmd
   .command('delete')

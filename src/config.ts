@@ -2,6 +2,30 @@ import { homedir } from 'os'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 
+// ── Project config (.vaultsync.yml in current directory) ──────────────────────
+
+export interface ProjectConfig {
+  label?: string
+  env?:   string
+}
+
+export function loadProjectConfig(): ProjectConfig {
+  const path = join(process.cwd(), '.vaultsync.yml')
+  if (!existsSync(path)) return {}
+  const config: ProjectConfig = {}
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const colon = trimmed.indexOf(':')
+    if (colon === -1) continue
+    const key = trimmed.slice(0, colon).trim()
+    const val = trimmed.slice(colon + 1).trim().replace(/^["']|["']$/g, '')
+    if (key === 'label') config.label = val
+    if (key === 'env')   config.env   = val
+  }
+  return config
+}
+
 // Server URL — override with VAULTSYNC_SERVER env var for self-hosted deployments
 export const SERVER_URL = (process.env.VAULTSYNC_SERVER ?? 'https://vault.allspheresynergy.com').replace(/\/+$/, '')
 
