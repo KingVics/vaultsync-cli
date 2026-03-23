@@ -3,11 +3,14 @@ import { loadConfig } from '../config.js'
 
 async function api(method: string, path: string, body?: unknown) {
   const { serverUrl, apiKey } = loadConfig()
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30_000)
   const res = await fetch(`${serverUrl}${path}`, {
     method,
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
     body: body ? JSON.stringify(body) : undefined,
-  })
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timer))
   const json = await res.json() as Record<string, unknown>
   if (!res.ok) throw new Error((json.error as string) ?? `Server returned ${res.status}`)
   return json

@@ -1,6 +1,6 @@
 {
   "name": "vaultsync-cli",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Zero-disk secrets delivery — CLI for pushing secrets and managing machines",
   "keywords": [
     "secrets",

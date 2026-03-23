@@ -42,6 +42,9 @@ export function loadConfig(): VaultConfig {
     throw new Error('Not logged in. Run: vaultsync login --key <apiKey>')
   }
   const raw = JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) as { apiKey: string }
+  if (!raw.apiKey || (!raw.apiKey.startsWith('vs_') && !raw.apiKey.startsWith('vps_ad'))) {
+    throw new Error('Stored API key is invalid — run: vaultsync login --key <apiKey>')
+  }
   return { apiKey: raw.apiKey, serverUrl: SERVER_URL }
 }
 

@@ -14,6 +14,7 @@ export const registerCmd = new Command('register')
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
       })
 
       const json = await res.json() as Record<string, unknown>

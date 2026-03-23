@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { createInterface } from 'readline'
-import { existsSync, writeFileSync } from 'fs'
+import { existsSync, writeFileSync, readFileSync, appendFileSync } from 'fs'
 import { join } from 'path'
 import { saveConfig, SERVER_URL } from '../config.js'
 
@@ -16,7 +16,7 @@ export const initCmd = new Command('init')
     console.log('\nVaultSync Setup')
     console.log('─'.repeat(30))
 
-    const serverInput = await ask(rl, `\nServer URL [${SERVER_URL}]: `)
+    const serverInput = await ask(rl, `\nServer URL: `)
     const server      = serverInput.trim() || SERVER_URL
 
     const apiKey = (await ask(rl, 'API key (vs_... or vps_ad...): ')).trim()
@@ -55,10 +55,19 @@ export const initCmd = new Command('init')
     rl2.close()
 
     if (label && env) {
-      const ymlPath = join(process.cwd(), '.vaultsync.yml')
+      const ymlPath      = join(process.cwd(), '.vaultsync.yml')
+      const gitignorePath = join(process.cwd(), '.gitignore')
+
       if (!existsSync(ymlPath)) {
         writeFileSync(ymlPath, `# VaultSync project config\nlabel: "${label}"\nenv: "${env}"\n`)
-        console.log(`✓ Created .vaultsync.yml (add to .gitignore if it contains sensitive names)`)
+        console.log(`✓ Created .vaultsync.yml`)
+      }
+
+      // Auto-add to .gitignore if not already there
+      const gitignoreContent = existsSync(gitignorePath) ? readFileSync(gitignorePath, 'utf8') : ''
+      if (!gitignoreContent.includes('.vaultsync.yml')) {
+        appendFileSync(gitignorePath, '\n# VaultSync project config\n.vaultsync.yml\n')
+        console.log(`✓ Added .vaultsync.yml to .gitignore`)
       }
     }
 

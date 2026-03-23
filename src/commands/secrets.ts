@@ -219,7 +219,10 @@ secretsCmd
 
       writeFileSync(outPath, plaintext, { mode: 0o600 })
       console.log(`\n✓ Decrypted "${result.label}" (${result.environment}) v${result.version} → ${outPath}`)
-      console.log(`  ⚠ This file contains plaintext secrets — do not commit it.\n`)
+      console.log(`\n  ⚠  SECURITY WARNING:`)
+      console.log(`     This file contains plaintext secrets.`)
+      console.log(`     Delete it when done: rm ${outPath}`)
+      console.log(`     Never commit it — add to .gitignore:\n     echo "${outPath}" >> .gitignore\n`)
     } catch (err) {
       console.error(`✗ ${(err as Error).message}`)
       process.exit(1)

@@ -44,30 +44,35 @@ export const policyCmd = new Command('grant')
   .requiredOption('--env <environment>', 'Environment (e.g. Production)')
   .action(async (opts) => {
     try {
-      // 1. Fetch machine record to get its public key
+      // 1. Find machine by name from the list (no public key in list response)
       const machinesResult = await api('GET', '/machines')
       const machineList = machinesResult.machines as Array<{
-        id: string; name: string; status: string; publicKey?: string
+        id: string; name: string; status: string
       }>
-      const machine = machineList.find(m => m.name === opts.machine)
+      const found = machineList.find(m => m.name === opts.machine)
 
-      if (!machine) {
+      if (!found) {
         throw new Error(
           `Machine "${opts.machine}" not found.\n` +
           `  Run \`vaultsync machine list\` to see enrolled machines.`
         )
       }
-      if (machine.status === 'revoked') {
+      if (found.status === 'revoked') {
         throw new Error(`Machine "${opts.machine}" is revoked and cannot be granted access.`)
       }
+
+      // 2. Fetch full machine record by ID to get its public key
+      const machineResult = await api('GET', `/machines/${found.id}`)
+      const machine = machineResult.machine as { id: string; name: string; publicKey: string }
+
       if (!machine.publicKey) {
         throw new Error(`Machine "${opts.machine}" has no public key on record. Re-enroll the machine.`)
       }
 
-      // 2. Load the locally-stored AES key for this label+environment
+      // 3. Load the locally-stored AES key for this label+environment
       const aesKey = loadKey(opts.label, opts.env)
 
-      // 3. Wrap the AES key with the machine's RSA public key
+      // 4. Wrap the AES key with the machine's RSA public key
       const wrappedKey = wrapKey(aesKey, machine.publicKey)
       console.log(`✓ AES key wrapped with ${opts.machine}'s RSA public key`)
 

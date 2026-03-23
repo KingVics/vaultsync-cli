@@ -29,8 +29,11 @@ export const doctorCmd = new Command('doctor')
       allOk = false
     }
 
-    // 2. Server URL
-    console.log(`\n  ℹ Server URL: ${SERVER_URL}`)
+    // 2. HTTPS check
+    if (!SERVER_URL.startsWith('https://')) {
+      check('warn', 'Server URL is not HTTPS', 'Secrets are transmitted over an unencrypted connection — use HTTPS in production')
+      allOk = false
+    }
 
     // 3. Server reachable
     try {

@@ -4,6 +4,21 @@ All notable changes to `vaultsync-cli` are documented here.
 
 ---
 
+## [0.2.2] — 2026-03-23
+
+### Fixed
+- `vaultsync grant` was broken after public keys were removed from the machine list response — now fetches the public key via a dedicated `GET /machines/:id` call
+- `vaultsync doctor` no longer prints the server URL in output
+- `vaultsync init` no longer shows the default server URL in the setup prompt
+- `vaultsync register` now correctly times out after 15 seconds instead of hanging indefinitely on network issues
+- `vaultsync audit` and all `vaultsync admin` commands now time out after 30 seconds instead of hanging indefinitely
+
+### Security
+- `loadConfig` now validates the stored API key format on every read — gives a clear error if credentials are corrupted rather than silently sending a bad key
+- `vaultsync doctor` warns when server URL is not HTTPS
+
+---
+
 ## [0.1.8] — 2026-03-23
 
 ### Added
